@@ -32,50 +32,99 @@ class Menu extends Phaser.Scene {
 
   update() {}
 }
-
+let player
+let platforms
 class Demo extends Phaser.Scene {
   constructor() {
     super({ key: 'Demo' })
   }
 
   preload() {
-    this.load.spritesheet('player_walk', 'src/assets/player_walk.png', {
-      frameWidth: 67,
-      frameHeight: 80
+    this.load.spritesheet('player_idle', 'src/assets/player_idle.png', {
+      frameWidth: 124 / 2,
+      frameHeight: 64
+    })
+    this.load.spritesheet('player_run', 'src/assets/player_run.png', {
+      frameWidth: 512 / 8,
+      frameHeight: 64
     })
 
     this.load.spritesheet('player_attack1', 'src/assets/player_attack.png', {
       frameWidth: 60,
       frameHeight: 70
     })
+
+    this.load.spritesheet('player_endrun', 'src/assets/player_endrun.png', {
+      frameWidth: 256 / 4,
+      frameHeight: 64
+    })
+
+    this.load.spritesheet('player_attack', 'src/assets/player_attack.png', {
+      frameWidth: 1920 / 15,
+      frameHeight: 64
+    })
+
+    this.load.image('bg1', 'src/assets/Background-forest_01.png')
+    this.load.image('bg2', 'src/assets/Background-forest_02.png')
+
+    this.load.image('bg3', 'src/assets/Background-forest_03.png')
+    this.load.image('bg4', 'src/assets/Background-forest_04.png')
+    this.load.image('bg5', 'src/assets/Background-forest_05.png')
+    this.load.image('bg6', 'src/assets/Background-forest_06.png')
+    this.load.image('bg7', 'src/assets/Background-forest_07.png')
+    this.load.image('bg8', 'src/assets/Background-forest_08.png')
+    this.load.image('platform', 'src/assets/Background-forest_09.png')
+    this.load.image('bg9', 'src/assets/longplatform.png')
   }
 
   create() {
     gameState.active = true
-    gameState.player = this.physics.add.sprite(80, 500, 'player_walk')
-    gameState.player.setCollideWorldBounds(true)
+
+    platforms = this.physics.add.staticGroup()
+    gameState.background = this.add.sprite(0, 0, 'bg1')
+    gameState.bg4 = this.add.sprite(0, 0, 'bg4')
+    gameState.bg5 = this.add.sprite(0, 0, 'bg5')
+    gameState.bg6 = this.add.sprite(0, 0, 'bg8')
+    gameState.bg7 = this.add.sprite(0, 0, 'bg7')
+    gameState.bg8 = this.add.sprite(0, 0, 'bg8')
+
+    platforms.create(400, 1000, 'bg3')
+    player = this.physics.add.sprite(0, 0, 'player_idle')
+
+    player.setCollideWorldBounds(true)
+    player.setScale(3.0)
+
+    this.physics.add.collider(player, platforms)
 
     this.anims.create({
-      key: 'walk',
-      frames: this.anims.generateFrameNumbers('player_walk', {
+      key: 'idle',
+      frames: this.anims.generateFrameNumbers('player_idle', {
         start: 0,
-        end: 10
+        end: 2
       }),
-      frameRate: 10,
+      frameRate: 5,
       repeat: -1
     })
 
     this.anims.create({
-      key: 'attack1',
-      frames: this.anims.generateFrameNumbers('player_attack1', {
+      key: 'player_run',
+      frames: this.anims.generateFrameNumbers('player_run', {
         start: 0,
-        end: 11
+        end: 7
       }),
-      frameRate: 2,
+      frameRate: 20,
       repeat: -1
     })
 
-    this.add.text(200, 200, 'Demo Page Working?')
+    this.anims.create({
+      key: 'player_attack',
+      frames: this.anims.generateFrameNumbers('player_attack', {
+        start: 1,
+        end: 15
+      }),
+      frameRate: 1,
+      repeat: -1
+    })
 
     gameState.cursors = this.input.keyboard.createCursorKeys()
   }
@@ -83,19 +132,21 @@ class Demo extends Phaser.Scene {
   update() {
     if (gameState.active) {
       if (gameState.cursors.right.isDown) {
-        gameState.player.setVelocityX(350)
-        gameState.player.anims.play('walk', true)
-        gameState.player.flipX = false
+        player.setVelocityX(350)
+        player.flipX = false
+        player.anims.play('player_run', true)
       } else if (gameState.cursors.left.isDown) {
-        gameState.player.setVelocityX(-350)
-        gameState.player.anims.play('walk', true)
-        gameState.player.flipX = true
+        player.setVelocityX(-350)
+        player.flipX = true
+        player.anims.play('player_run', true)
       } else {
-        gameState.player.setVelocityX(0)
-        gameState.player.anims.play('walk', false)
+        player.setVelocityX(0)
+        player.anims.play('idle', true)
       }
       if (gameState.cursors.space.isDown) {
-        gameState.player.anims.play('attack1', true)
+        player.anims.play('player_attack', true)
+      } else {
+        player.anims.play('idle', true)
       }
     }
   }
@@ -114,7 +165,7 @@ const config = {
       enableBody: true
     }
   },
-  scene: [Menu, Demo]
+  scene: [Demo]
 }
 
 const game = new Phaser.Game(config)
