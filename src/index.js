@@ -82,6 +82,11 @@ class Demo extends Phaser.Scene {
       frameHeight: 192
     })
 
+    this.load.spritesheet('explosion', 'src/assets/explosion-4.png', {
+      frameWidth: 128,
+      frameHeight: 128
+    })
+
     this.load.image('car-platform', 'src/assets/carplatform.png')
     this.load.image('bullet', 'src/assets/bullet.png')
     this.load.audio('bulletsound', 'src/assets/bulletsound.mp3')
@@ -131,9 +136,9 @@ class Demo extends Phaser.Scene {
     this.player.setCollideWorldBounds(true)
     this.physics.add.collider(this.player, gameState.ground)
 
-    const car_platform = this.physics.add.staticGroup()
-    car_platform.create(400, 250, 'car-platform').refreshBody()
-    this.physics.add.collider(this.player, car_platform)
+    this.car_platform = this.physics.add.staticGroup()
+    this.car_platform.create(400, 250, 'car-platform').refreshBody()
+    this.physics.add.collider(this.player, this.car_platform)
 
     const npc_fat = this.physics.add.sprite(200, 290, 'npc_talk_fat')
     npc_fat.setCollideWorldBounds(true)
@@ -152,8 +157,12 @@ class Demo extends Phaser.Scene {
       .text(200, 0, `bullets: 0`)
       .setScrollFactor(0)
 
+    this.playerHealthBar = this.add
+      .text(300, 0, `Health: 100%`)
+      .setScrollFactor(0)
+
     //ammo:
-    let player_health = 0
+    this.player_health = 100
     gameState.ammo = this.physics.add.staticGroup()
     gameState.ammo.create(600, 260, 'ammo')
     this.physics.add.collider(this.player, gameState.ammo, (x, y) => {
@@ -247,7 +256,17 @@ class Demo extends Phaser.Scene {
         end: 9
       }),
       frameRate: 10,
-      repeat: 0
+      repeat: -1
+    })
+
+    this.explosion = this.anims.create({
+      key: 'explosion',
+      frames: this.anims.generateFrameNumbers('explosion', {
+        start: 0,
+        end: 11
+      }),
+      frameRate: 10,
+      repeat: 1
     })
 
     this.healthBarNPCFAT = this.add
@@ -279,42 +298,70 @@ class Demo extends Phaser.Scene {
     })
 
     // demonlv1
-    this.demonlv1 = this.physics.add.sprite(1200, 0, 'demonlv1').setGravity(0)
+    this.demonlv1 = this.physics.add.sprite(1600, 0, 'demonlv1').setGravity(0)
     this.demonlv1.setCollideWorldBounds(true)
     this.demonlv1.anims.play('demonidlelv1', true)
-    this.demonAttack = this.physics.add.collider(
+    this.demonAttack = this.physics.add.overlap(
       this.player,
       this.demonlv1,
       () => {
-        this.player.body.setBounceX(1)
+        this.demonlv1.setVelocityY(-400)
+        this.demonlv1.anims.play('demon_lv1_attack', true)
+        this.player_health -= 10
+      }
+    )
+
+    //
+    this.carExplosion = this.physics.add.overlap(
+      this.demonlv1,
+      this.car_platform,
+      (demon, car) => {
+        car.destroy()
+        this.demonlv1.anims.play('blood', true)
+        npc_fat.anims.play('blood', true)
+        demon.setVelocityX(0)
       }
     )
 
     this.demonFollowPlayer = () => {
-      if (this.demonlv1.x < this.player.x) {
-        this.demonlv1.setVelocityX(100)
-        this.demonlv1.anims.play('demonidlelv1', true)
-        this.demonlv1.flipX = true
-      } else if (this.demonlv1.x > this.player.x) {
+      if (this.demonlv1.x + this.player.width === this.player.x) {
+        this.demonlv1.setVelocityX(0)
+        this.demonlv1.anims.play('demon_lv1_attack', true)
+      } else if (
+        this.demonlv1.x + this.player.width > this.player.x &&
+        this.player.x >= 1200
+      ) {
         this.demonlv1.setVelocityX(-100)
         this.demonlv1.flipX = false
-        this.demonlv1.anims.play('demonidlelv1', true)
-      } else {
+      } else if (this.demonlv1.x + this.player.width < this.player.x) {
+        this.demonlv1.setVelocityX(100)
+        this.demonlv1.flipX = true
+      } else if (this.demonlv1.x === this.car_platform) {
         this.demonlv1.setVelocityX(0)
-
-        this.demonlv1.anims.play('demon_lv1_attack', true)
+        this.demonlv1.destroy()
       }
     }
 
-    //
+    this.playerDeath = () => {
+      if (this.player_health <= 0) {
+        this.add.text(this.player.x, this.player.y - 90, 'You are Dead', {
+          fontSize: '40px'
+        })
+        this.physics.pause()
+      }
+    }
+
+    this.updatePlayerHP = () => {
+      this.playerHealthBar.setText(`Health:${this.player_health}%`)
+    }
 
     this.cursors = this.input.keyboard.createCursorKeys()
   }
 
   update() {
-    console.log('karma:', this.karma)
-    this.demonFollowPlayer()
-
+    this.playerDeath()
+    this.updatePlayerHP()
+    console.log(this.player_health)
     const cam = this.cameras.main
     let speed = 80
     cam.startFollow(this.player)
@@ -329,8 +376,7 @@ class Demo extends Phaser.Scene {
       }
     }
     toggleGun()
-    console.log('playerx', this.player.x)
-    console.log('demonx', this.demonlv1.x)
+
     // player walk
     if (this.cursors.right.isDown) {
       //   cam.scrollX += speed
@@ -368,6 +414,7 @@ class Demo extends Phaser.Scene {
         this.bullet.gravity = 0
       }
     }
+    this.demonFollowPlayer()
   }
 }
 const config = {
